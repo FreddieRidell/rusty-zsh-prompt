@@ -1,0 +1,4 @@
+[[package]]
+name = "rusty-zsh-prompt"
+version = "0.1.0"
+
