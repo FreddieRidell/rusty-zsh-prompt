@@ -24,10 +24,18 @@ fn get_branch_name(repo: &Repository) -> String {
     String::from(repo.head().unwrap().shorthand().unwrap())
 }
 
+fn get_statuses(repo: &Repository) -> () {
+repo.statuses(None).unwrap().iter().for_each( |s| -> () {
+println!("{:?}", s.status());
+    });
+}
+
 fn main() {
     let repo = Repository::discover(".").unwrap();
 
-    println!("{:?}", get_branch_name(&repo))
+    println!("{:?}", get_branch_name(&repo));
+
+    get_statuses(&repo);
 
     //println!("{} {} {} {}{}", get_host_name(), get_time(), get_repo(), get_current_dir(), get_newline());
 }
