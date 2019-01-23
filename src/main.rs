@@ -1,7 +1,7 @@
 use git2::Repository;
 
 fn get_host_name() -> String {
- String::from("%{%F{red}%}%n@%m")
+    String::from("%{%F{red}%}%n@%m")
 }
 
 fn get_current_dir() -> String {
@@ -21,22 +21,13 @@ fn get_newline() -> String {
 }
 
 fn get_branch_name(repo: &Repository) -> String {
-    let branch = match(repo.head()){
-        Ok(head) => match(head.shorthand()){
-            Some(name) => String::from(name),
-            None => String::from(""),
-        },
-        Err(_) => String::from("")
-    };
-
-    String::from(branch)
+    String::from(repo.head().unwrap().shorthand().unwrap())
 }
 
 fn main() {
-
     let repo = Repository::discover(".").unwrap();
 
-    println!("{:?}", get_branch_name(&repo) )
+    println!("{:?}", get_branch_name(&repo))
 
     //println!("{} {} {} {}{}", get_host_name(), get_time(), get_repo(), get_current_dir(), get_newline());
 }
