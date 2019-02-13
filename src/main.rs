@@ -10,8 +10,10 @@ fn paint_text_in_color(color: &i8, text: String) -> String {
 }
 
 fn get_static_prompt() -> String {
+    let prompt_color = env::var("PROMPT_COLOR").unwrap().parse::<i8>().unwrap();;
+
     vec![
-        paint_text_in_color(&1, String::from("%n@%m")),
+        paint_text_in_color(&prompt_color, String::from("%n@%m")),
         paint_text_in_color(&7, String::from("%D{%a %Y-%m-%d %T}")),
         paint_text_in_color(&2, String::from("%~")),
         paint_text_in_color(&7, String::from("\n$ ")),
