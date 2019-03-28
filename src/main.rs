@@ -2,6 +2,20 @@ use std::collections::HashMap;
 use std::fmt::{self, Display};
 use git2::{BranchType, Repository};
 
+fn get_stashes(repo: &mut Repository) -> String {
+    let mut buff = String::from("");
+
+    repo.stash_foreach(|_, stash, _| {
+        buff.push_str(stash);
+        buff.push_str(" ");
+
+        true
+    });
+
+
+    paint_text_in_color(&1, buff)
+}
+
 #[derive(Eq, PartialEq, Hash, Debug)]
 enum OutputStatuses {
     Conflicted,
@@ -181,9 +195,10 @@ fn get_remote_diff(repo: &Repository) -> String {
 }
 
 fn print_right() -> () {
-    if let Ok(repo) = Repository::discover(".") {
+    if let Ok(mut repo) = Repository::discover(".") {
         println!(
-            "[{} {} {}]",
+            "[ {}{} {} {}]",
+            get_stashes(&mut repo),
             get_statuses(&repo),
             get_branch_name(&repo),
             get_remote_diff(&repo)
