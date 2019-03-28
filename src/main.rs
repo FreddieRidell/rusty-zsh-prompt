@@ -1,17 +1,20 @@
+use git2::{BranchType, Repository};
 use std::collections::HashMap;
 use std::fmt::{self, Display};
-use git2::{BranchType, Repository};
 
 fn get_stashes(repo: &mut Repository) -> String {
     let mut buff = String::from("");
 
-    repo.stash_foreach(|_, stash, _| {
+    let result = repo.stash_foreach(|_, stash, _| {
         buff.push_str(stash);
         buff.push_str(" ");
 
         true
     });
 
+    if let Err(_) = result {
+        panic!()
+    };
 
     paint_text_in_color(&1, buff)
 }
@@ -49,13 +52,14 @@ struct StatusBlock {
 impl StatusBlock {
     fn new() -> Self {
         StatusBlock {
-            statuses: HashMap::new()
+            statuses: HashMap::new(),
         }
     }
 
     fn increment(&mut self, status: OutputStatuses) -> () {
-        self.statuses.entry(status)
-            .and_modify(|e| { *e += 1 })
+        self.statuses
+            .entry(status)
+            .and_modify(|e| *e += 1)
             .or_insert(1);
     }
 }
@@ -71,7 +75,9 @@ impl Display for StatusBlock {
             OutputStatuses::New,
             OutputStatuses::Renamed,
             OutputStatuses::TypeChange,
-        ].iter().for_each( |status| {
+        ]
+        .iter()
+        .for_each(|status| {
             if let Some(count) = self.statuses.get(status) {
                 output.push(status.format(*count));
             }
@@ -88,18 +94,18 @@ struct Statuses {
 }
 
 impl Statuses {
-    fn new () -> Self {
+    fn new() -> Self {
         Statuses {
             index: StatusBlock::new(),
             working: StatusBlock::new(),
         }
     }
 
-    fn increment_index (&mut self, status: OutputStatuses) -> () {
+    fn increment_index(&mut self, status: OutputStatuses) -> () {
         self.index.increment(status);
     }
 
-    fn increment_working (&mut self, status: OutputStatuses) -> () {
+    fn increment_working(&mut self, status: OutputStatuses) -> () {
         self.working.increment(status);
     }
 }
@@ -152,7 +158,7 @@ fn get_statuses(repo: &Repository) -> String {
             };
         });
 
-    format!(" {}", statuses)
+    format!("{}", statuses)
 }
 
 fn paint_text_in_color(color: &i8, text: String) -> String {
