@@ -2,7 +2,7 @@ use git2::{BranchType, Repository};
 use std::collections::HashMap;
 use std::fmt::{self, Display};
 
-fn get_stashes(repo: &mut Repository) -> String {
+fn get_stashes(use_ansi: bool, repo: &mut Repository) -> String {
     let mut buff = String::from("");
 
     let result = repo.stash_foreach(|_, stash, _| {
@@ -16,7 +16,7 @@ fn get_stashes(repo: &mut Repository) -> String {
         panic!()
     };
 
-    paint_text_in_color(&1, buff)
+    paint_text_in_color(use_ansi, &1, buff)
 }
 
 #[derive(Eq, PartialEq, Hash, Debug)]
@@ -30,7 +30,7 @@ enum OutputStatuses {
 }
 
 impl OutputStatuses {
-    fn format(&self, num: usize) -> String {
+    fn format(&self, use_ansi: bool, num: usize) -> String {
         let color = match self {
             &OutputStatuses::Conflicted => &6,
             &OutputStatuses::Deleted => &1,
@@ -40,18 +40,20 @@ impl OutputStatuses {
             &OutputStatuses::TypeChange => &4,
         };
 
-        paint_text_in_color(color, format!("{}", num))
+        paint_text_in_color(use_ansi, color, format!("{}", num))
     }
 }
 
 #[derive(Debug)]
 struct StatusBlock {
+    use_ansi: bool,
     statuses: HashMap<OutputStatuses, usize>,
 }
 
 impl StatusBlock {
-    fn new() -> Self {
+    fn new(use_ansi: bool) -> Self {
         StatusBlock {
+            use_ansi,
             statuses: HashMap::new(),
         }
     }
@@ -79,7 +81,7 @@ impl Display for StatusBlock {
         .iter()
         .for_each(|status| {
             if let Some(count) = self.statuses.get(status) {
-                output.push(status.format(*count));
+                output.push(status.format(self.use_ansi, *count));
             }
         });
 
@@ -94,10 +96,10 @@ struct Statuses {
 }
 
 impl Statuses {
-    fn new() -> Self {
+    fn new(use_ansi: bool) -> Self {
         Statuses {
-            index: StatusBlock::new(),
-            working: StatusBlock::new(),
+            index: StatusBlock::new(use_ansi),
+            working: StatusBlock::new(use_ansi),
         }
     }
 
@@ -116,8 +118,8 @@ impl Display for Statuses {
     }
 }
 
-fn get_statuses(repo: &Repository) -> String {
-    let mut statuses = Statuses::new();
+fn get_statuses(use_ansi: bool, repo: &Repository) -> String {
+    let mut statuses = Statuses::new(use_ansi);
 
     repo.statuses(None)
         .unwrap()
@@ -161,21 +163,25 @@ fn get_statuses(repo: &Repository) -> String {
     format!("{}", statuses)
 }
 
-fn paint_text_in_color(color: &i8, text: String) -> String {
-    format!("%F{{{}}}{}%f", color, text)
+fn paint_text_in_color(use_ansi: bool, color: &i8, text: String) -> String {
+    if use_ansi {
+        format!("\x1b[{}m{}\x1b[0m", (color + 30).to_string(), text)
+    } else {
+        format!("%F{{{}}}{}%f", color, text)
+    }
 }
 
-fn get_branch_name(repo: &Repository) -> String {
+fn get_branch_name(use_ansi: bool, repo: &Repository) -> String {
     if let Ok(head) = repo.head() {
         if let Some(head_name) = head.shorthand() {
-            return paint_text_in_color(&5, String::from(head_name));
+            return paint_text_in_color(use_ansi, &5, String::from(head_name));
         }
     }
 
     String::from("NO_BRANCH")
 }
 
-fn get_remote_diff(repo: &Repository) -> String {
+fn get_remote_diff(use_ansi: bool, repo: &Repository) -> String {
     if let Ok(head) = repo.head() {
         if let Some(shorthand) = head.shorthand() {
             let branch_name = String::from(shorthand);
@@ -190,7 +196,7 @@ fn get_remote_diff(repo: &Repository) -> String {
                         .unwrap();
 
                     if let Ok((ahead, behind)) = repo.graph_ahead_behind(this_oid, upstream_oid) {
-                        return paint_text_in_color(&4, format!("{}/{} ", ahead, behind));
+                        return paint_text_in_color(use_ansi, &4, format!("{}/{} ", ahead, behind));
                     }
                 }
             }
@@ -200,20 +206,31 @@ fn get_remote_diff(repo: &Repository) -> String {
     return String::from("");
 }
 
-fn print_right() -> () {
+fn print_right(use_ansi: bool) -> () {
     if let Ok(mut repo) = Repository::discover(".") {
         println!(
             "[ {}{} {} {}]",
-            get_stashes(&mut repo),
-            get_statuses(&repo),
-            get_branch_name(&repo),
-            get_remote_diff(&repo)
+            get_stashes(use_ansi, &mut repo),
+            get_statuses(use_ansi, &repo),
+            get_branch_name(use_ansi, &repo),
+            get_remote_diff(use_ansi, &repo)
         );
     } else {
         println!("[]")
     }
 }
+use clap::Parser;
+
+#[derive(Parser, Debug)]
+#[command(version, about, long_about = None)]
+struct Args {
+    /// Name of the person to greet
+    #[arg(short, long)]
+    ansi: bool,
+}
 
 fn main() {
-    print_right();
+    let Args { ansi } = Args::parse();
+
+    print_right(ansi);
 }

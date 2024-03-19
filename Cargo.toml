@@ -5,4 +5,5 @@ authors = ["Freddie Ridell <contact@freddieridell.com>"]
 edition = "2018"
 
 [dependencies]
+clap = { version = "4.5.3", features = ["derive"] }
 git2 = "0.8.0"
